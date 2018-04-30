@@ -1,0 +1,8 @@
+#+TITLE: LiterateOrg.jl
+#+AUTHOR: Stefanos Carlström
+#+EMAIL: stefanos.carlstrom@gmail.com
+
+[[https://travis-ci.org/jagot/LiterateOrg.jl][https://travis-ci.org/jagot/LiterateOrg.jl.svg?branch=master]]
+[[https://coveralls.io/github/jagot/LiterateOrg.jl?branch=master][https://coveralls.io/repos/github/jagot/LiterateOrg.jl/badge.svg?branch=master]]
+[[http://codecov.io/gh/jagot/LiterateOrg.jl][http://codecov.io/gh/jagot/LiterateOrg.jl/branch/master/graph/badge.svg]]
+
