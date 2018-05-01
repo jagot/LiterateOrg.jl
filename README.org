@@ -9,12 +9,17 @@
 Brings Emacs to Julia! The documentation is, of course, found in [[file:src/LiterateOrg.org][the
 code itself]].
 
+Packages based on LiterateOrg.jl are still usable for non-Emacs users;
+however, for contributors to such packages, it will be more efficient
+to work from an [[https://www.gnu.org/software/emacs/][Emacs]], [[https://orgmode.org][Org-mode]]+[[https://orgmode.org/worg/org-contrib/babel/][Babel]], [[http://ess.r-project.org][ESS]] setup.
+
 * Ideas
-  - Extract Julia code
-  - Skip commented sections
-  - Tests inline
-  - Eat own dog food, i.e. self-hosted
+  - [X] Extract Julia code
+  - [X] Skip commented sections
+  - [X] Tests inline
+  - [X] Eat own dog food, i.e. self-hosted
 * Alternatives
   Packages of similar, but not quite, intent; based on Markdown:
   - [[https://github.com/mpastell/Weave.jl][Weave.jl]]
   - [[https://github.com/fredrikekre/Literate.jl][Literate.jl]]
+
