@@ -1,0 +1,173 @@
+#+TITLE: LiterateOrg.jl
+#+AUTHOR: Stefanos Carlström
+#+EMAIL: stefanos.carlstrom@gmail.com
+
+#+PROPERTY: header-args:julia :session *julia-LiterateOrg*
+
+* Introduction
+  LiterateOrg.jl is a Julia package for development of Julia packages
+  in the [[https://en.wikipedia.org/wiki/Literate_programming][literate programming]] paradigm invented by [[https://en.wikipedia.org/wiki/Donald_Knuth][Donald Knuth]], and
+  as implemented by Emacs' [[https://orgmode.org][Org-mode]].
+
+  The idea is that all Julia code blocks within an Org file are
+  tangled; those under a section headline simply called "Test" go into
+  the unit tests, whereas the rest make up the package implementation.
+
+* Code to parse an Org-file
+** Org file data structure
+   #+BEGIN_SRC julia
+     abstract type OrgNode end
+
+     struct OrgSection <: OrgNode
+         title::String
+         level::Integer
+         children::Vector{OrgNode}
+         comment::Bool
+     end
+     level(os::OrgSection) = os.level
+
+     mutable struct OrgText <: OrgNode
+         contents::String
+     end
+
+     mutable struct OrgCode <: OrgNode
+         contents::String
+         language::String
+         arguments::String
+     end
+
+     struct OrgProperty <: OrgNode
+         property::String
+         value::String
+     end
+
+     struct OrgFile
+         title::String
+         author::String
+         email::String
+         date
+         tree::Vector{OrgNode}
+     end
+   #+END_SRC
+
+   #+RESULTS:
+   : nothing
+
+** Read Org file
+   This function reads an Org-mode file and turns it into a Julia data
+   structure.
+   #+BEGIN_SRC julia :results verbatim
+     using DataStructures
+
+     function read_org_file(filename::String)
+         title = ""
+         author = ""
+         email = ""
+         date = now()
+         tree = OrgNode[]
+
+         prop_pat = r"^#\+(.*?):[ ]*(.*)"
+         sec_pat = r"^([*]+)[ ]+(COMMENT[ ]+){0,1}(.+)"
+         start_code_pat = r"[ ]*#\+begin_src[ ]+([^ ]+)(.*)"
+         end_code_pat = r"[ ]*#\+end_src"
+
+         sec_stack = Stack(OrgSection)
+         last_node = nothing
+         node_mode = :text
+
+         open(filename) do file
+             for line in readlines(file)
+                 if ismatch(prop_pat, line)
+                     m = match(prop_pat, line)
+                     prop = OrgProperty(lowercase(m[1]), m[2])
+                     push!(tree, prop)
+                     last_node = prop
+
+                     prop_type = prop.property
+                     prop_val = prop.value
+
+                     if prop_type == "title"
+                         title = prop_val
+                     elseif prop_type == "author"
+                         author = prop_val
+                     elseif prop_type == "email"
+                         email = prop_val
+                     elseif prop_type == "date"
+                         date = prop_val
+                     end
+                 elseif ismatch(sec_pat, line)
+                     m = match(sec_pat, line)
+                     l = length(m[1])
+                     section = OrgSection(m[3], l, OrgNode[], m[2] != nothing)
+
+                     while !isempty(sec_stack) && level(top(sec_stack)) >= l
+                         pop!(sec_stack)
+                     end
+
+                     if isempty(sec_stack)
+                         push!(sec_stack, section)
+                         push!(tree, section)
+                     else
+                         prev_sec = top(sec_stack)
+                         push!(prev_sec.children, section)
+                         push!(sec_stack, section)
+                     end
+
+                     last_node = section
+                 elseif ismatch(end_code_pat, lowercase(line))
+                     node_mode = :text
+                 else # Code/normal text
+                     node = nothing
+                     if ismatch(start_code_pat, lowercase(line))
+                         m = match(start_code_pat, lowercase(line))
+                         node = OrgCode("", m[1], m[2])
+                         last_node = node
+                         node_mode = :code
+                     elseif typeof(last_node) == OrgText && node_mode == :text ||
+                         typeof(last_node) == OrgCode && node_mode == :code
+                         last_node.contents = "$(last_node.contents)\n$(line)"
+                     else
+                         node = OrgText(line)
+                         last_node = node
+                         node_mode = :text
+                     end
+
+                     if node != nothing
+                         if !isempty(sec_stack)
+                             push!(top(sec_stack).children, node)
+                         else
+                             push!(tree, node)
+                         end
+                     end
+                 end
+             end
+         end
+
+         OrgFile(title, author, email, date, tree)
+     end
+
+     read_org_file("LiterateOrg.org")
+   #+END_SRC
+
+   #+RESULTS:
+   : OrgFile("LiterateOrg.jl", "Stefanos Carlström", "stefanos.carlstrom@gmail.com", 2018-05-01T11:10:05.587, OrgNode[OrgProperty("title", "LiterateOrg.jl"), OrgProperty("author", "Stefanos Carlström"), OrgProperty("email", "stefanos.carlstrom@gmail.com"), OrgText(""), OrgProperty("property", "header-args:julia :session *julia-LiterateOrg*"), OrgText(""), OrgSection("Introduction", 1, OrgNode[OrgText("  LiterateOrg.jl is a Julia package for development of Julia packages\n  in the [[https://en.wikipedia.org/wiki/Literate_programming][literate programming]] paradigm invented by [[https://en.wikipedia.org/wiki/Donald_Knuth][Donald Knuth]], and\n  as implemented by Emacs' [[https://orgmode.org][Org-mode]].\n  \n  The idea is that all Julia code blocks within an Org file are\n  tangled; those under a section headline simply called \"Test\" go into\n  the unit tests, whereas the rest make up the package implementation.\n")], false), OrgSection("Code to parse an Org-file", 1, OrgNode[OrgSection("Org file data structure", 2, OrgNode[OrgCode("\n     abstract type OrgNode end\n\n     struct OrgSection <: OrgNode\n         title::String\n         level::Integer\n         children::Vector{OrgNode}\n         comment::Bool\n     end\n     level(os::OrgSection) = os.level\n\n     mutable struct OrgText <: OrgNode\n         contents::String\n     end\n\n     mutable struct OrgCode <: OrgNode\n         contents::String\n         language::String\n         arguments::String\n     end\n\n     struct OrgProperty <: OrgNode\n         property::String\n         value::String\n     end\n\n     struct OrgFile\n         title::String\n         author::String\n         email::String\n         date\n         tree::Vector{OrgNode}\n     end", "julia", ""), OrgText("\n   #+RESULTS:\n   : nothing\n")], false), OrgSection("Read Org file", 2, OrgNode[OrgText("   This function reads an Org-mode file and turns it into a Julia data\n   structure."), OrgCode("\n     using DataStructures\n\n     function read_org_file(filename::String)\n         title = \"\"\n         author = \"\"\n         email = \"\"\n         date = now()\n         tree = OrgNode[]\n\n         prop_pat = r\"^#\\+(.*?):[ ]*(.*)\"\n         sec_pat = r\"^([*]+)[ ]+(COMMENT[ ]+){0,1}(.+)\"\n         start_code_pat = r\"[ ]*#\\+begin_src[ ]+([^ ]+)(.*)\"\n         end_code_pat = r\"[ ]*#\\+end_src\"\n\n         sec_stack = Stack(OrgSection)\n         last_node = nothing\n         node_mode = :text\n\n         open(filename) do file\n             for line in readlines(file)\n                 if ismatch(prop_pat, line)\n                     m = match(prop_pat, line)\n                     prop = OrgProperty(lowercase(m[1]), m[2])\n                     push!(tree, prop)\n                     last_node = prop\n\n                     prop_type = prop.property\n                     prop_val = prop.value\n\n                     if prop_type == \"title\"\n                         title = prop_val\n                     elseif prop_type == \"author\"\n                         author = prop_val\n                     elseif prop_type == \"email\"\n                         email = prop_val\n                     elseif prop_type == \"date\"\n                         date = prop_val\n                     end\n                 elseif ismatch(sec_pat, line)\n                     m = match(sec_pat, line)\n                     l = length(m[1])\n                     section = OrgSection(m[3], l, OrgNode[], m[2] != nothing)\n\n                     while !isempty(sec_stack) && level(top(sec_stack)) >= l\n                         pop!(sec_stack)\n                     end\n\n                     if isempty(sec_stack)\n                         push!(sec_stack, section)\n                         push!(tree, section)\n                     else\n                         prev_sec = top(sec_stack)\n                         push!(prev_sec.children, section)\n                         push!(sec_stack, section)\n                     end\n\n                     last_node = section\n                 elseif ismatch(end_code_pat, lowercase(line))\n                     node_mode = :text\n                 else # Code/normal text\n                     node = nothing\n                     if ismatch(start_code_pat, lowercase(line))\n                         m = match(start_code_pat, lowercase(line))\n                         node = OrgCode(\"\", m[1], m[2])\n                         last_node = node\n                         node_mode = :code\n                     elseif typeof(last_node) == OrgText && node_mode == :text ||\n                         typeof(last_node) == OrgCode && node_mode == :code\n                         last_node.contents = \"\$(last_node.contents)\\n\$(line)\"\n                     else\n                         node = OrgText(line)\n                         last_node = node\n                         node_mode = :text\n                     end\n\n                     if node != nothing\n                         if !isempty(sec_stack)\n                             push!(top(sec_stack).children, node)\n                         else\n                             push!(tree, node)\n                         end\n                     end\n                 end\n             end\n         end\n\n         OrgFile(title, author, email, date, tree)\n     end\n\n     read_org_file(\"LiterateOrg.org\")", "julia", " :results verbatim"), OrgText("\n   #+RESULTS:\n   : nothing\n   "), OrgSection("Test", 3, OrgNode[OrgCode("\n      @test 1 == 1", "julia", ""), OrgText("\n    #+RESULTS:\n    : 7\n")], false)], false), OrgSection("Tangle Julia code", 2, OrgNode[OrgText("   Once we have a Julia representation of the Org file, we can tangle\n   the code to a Julia file.\n")], false), OrgSection("String representation", 2, OrgNode[OrgText("")], false), OrgSection("Commented out section", 2, OrgNode[OrgText("   This entire section should be commented out.\n"), OrgSection("Commented out subsection", 3, OrgNode[OrgText("    This too, by virtue of its parent's commmentedness.")], false)], true)], false)])
+
+*** Test
+    #+BEGIN_SRC julia
+      @test 1 == 1
+    #+END_SRC
+
+    #+RESULTS:
+    : 7
+
+** Tangle Julia code
+   Once we have a Julia representation of the Org file, we can tangle
+   the code to a Julia file.
+
+** String representation
+
+** COMMENT Commented out section
+   This entire section should be commented out.
+
+*** Commented out subsection
+    This too, by virtue of its parent's commmentedness.
