@@ -192,7 +192,6 @@
          end
      end
 
-
      tangle(filename::String;
             file_base = first(rsplit(filename, ".", limit=2)),
             language="julia") =
@@ -201,6 +200,48 @@
 
    #+RESULTS:
    : nothing
+
+*** Tangle Julia package/tests
+    We use the functionality from above to generate a package source
+    code file from all code blocks that are /not/ test cases, and
+    conversely, a unit test file from all code blocks that are found
+    under sections with the heading "Test".
+    #+BEGIN_SRC julia
+      extract(o::OrgNode, tests::Bool=false) = o
+      function extract(o::OrgSection, tests::Bool=false)
+          !tests && o.title == "Test" && return nothing
+
+          children = OrgNode[]
+          for child in extract.(o.children, tests)
+              child != nothing && (!tests || typeof(child) == OrgSection || o.title == "Test") && push!(children, child)
+          end
+
+          OrgSection(o.title, o.level, children, o.comment)
+      end
+
+      function extract(o::OrgFile, tests::Bool=false)
+          tree = OrgNode[]
+          for node in extract.(o.tree, tests)
+              node != nothing && (!tests || typeof(node) == OrgSection) && push!(tree, node)
+          end
+
+          OrgFile(o.title, o.author, o.email, o.date, tree)
+      end
+
+
+      function tangle_package(org_filename::String, package_name::String)
+          org_file = read_org_file(org_filename)
+
+          build_dir = joinpath(Pkg.dir(package_name), "deps", "build")
+          mkpath(build_dir)
+
+          tangle(joinpath(build_dir, "code.jl"), extract(org_file))
+          tangle(joinpath(build_dir, "tests.jl"), extract(org_file, true))
+      end
+    #+END_SRC
+
+    #+RESULTS:
+    : nothing
 
 
 ** String representation
