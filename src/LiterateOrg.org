@@ -162,8 +162,8 @@
    Once we have a Julia representation of the Org file, we can tangle
    the code to a Julia file.
    #+BEGIN_SRC julia
-     file_endings = Dict("julia" => "jl")
-     comments = Dict("julia" => "#")
+     file_endings = Dict("julia" => "jl", "python" => "py")
+     comments = Dict("julia" => "#", "python" => "#")
 
      function tangle(io::IO, os::OrgSection, language::String)
          os.comment && return
@@ -181,7 +181,7 @@
      end
 
      tangle(io::IO, oc::OrgCode, language::String) =
-         write(io, oc.contents)
+         oc.language == language && write(io, oc.contents)
 
      tangle(io::IO, op::OrgProperty, language::String) =
          write(io, @sprintf("%s % 10s: %s\n", comments[language], uppercase(op.property), op.value))
