@@ -238,6 +238,8 @@
           tangle(joinpath(build_dir, "code.jl"), extract(org_file))
           tangle(joinpath(build_dir, "tests.jl"), extract(org_file, true))
       end
+
+      export tangle_package
     #+END_SRC
 
     #+RESULTS:
