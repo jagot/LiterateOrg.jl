@@ -22,7 +22,7 @@
          title::String
          level::Integer
          children::Vector{OrgNode}
-         comment::Bool
+         kind::Symbol
      end
      level(os::OrgSection) = os.level
 
@@ -67,7 +67,7 @@
          tree = OrgNode[]
 
          prop_pat = r"^#\+(.*?):[ ]*(.*)"
-         sec_pat = r"^([*]+)[ ]+(COMMENT[ ]+){0,1}(.+)"
+         sec_pat = r"^([*]+)[ ]+(COMMENT|TEST|EXAMPLE){0,1}[ ]*(.*)"
          start_code_pat = r"[ ]*#\+begin_src[ ]+([^ ]+)(.*)"
          end_code_pat = r"[ ]*#\+end_src"
 
@@ -98,7 +98,8 @@
                  elseif ismatch(sec_pat, line)
                      m = match(sec_pat, line)
                      l = length(m[1])
-                     section = OrgSection(m[3], l, OrgNode[], m[2] != nothing)
+                     section = OrgSection(m[3], l, OrgNode[],
+                                          Symbol(m[2] != nothing ? lowercase(m[2]) : :code))
 
                      while !isempty(sec_stack) && level(top(sec_stack)) >= l
                          pop!(sec_stack)
@@ -150,7 +151,7 @@
    #+RESULTS:
    : read_org_file
 
-*** Test
+*** TEST
     #+BEGIN_SRC julia
       @test 1 == 1
     #+END_SRC
@@ -166,7 +167,7 @@
      comments = Dict("julia" => "#", "python" => "#")
 
      function tangle(io::IO, os::OrgSection, language::String)
-         os.comment && return
+         os.kind ∈ [:comment, :example] && return
          write(io, @sprintf("%s %s %s\n",
                             comments[language],
                             repeat("*", os.level),
@@ -209,14 +210,16 @@
     #+BEGIN_SRC julia
       extract(o::OrgNode, tests::Bool=false) = o
       function extract(o::OrgSection, tests::Bool=false)
-          !tests && o.title == "Test" && return nothing
+          !tests && o.kind != :code && return nothing
 
           children = OrgNode[]
           for child in extract.(o.children, tests)
-              child != nothing && (!tests || typeof(child) == OrgSection || o.title == "Test") && push!(children, child)
+              child != nothing && (!tests ||
+                                 typeof(child) == OrgSection ||
+                                 o.kind == :test) && push!(children, child)
           end
 
-          OrgSection(o.title, o.level, children, o.comment)
+          OrgSection(o.title, o.level, children, o.kind)
       end
 
       function extract(o::OrgFile, tests::Bool=false)
@@ -253,7 +256,7 @@
      function show(io::IO, os::OrgSection)
          write(io, @sprintf("%s %s%s\n",
                             repeat("*", os.level),
-                            os.comment ? "COMMENT " : "",
+                            os.kind == :code ? "" : "$(uppercase(string(os.kind))) ",
                             os.title))
          map(n -> show(io, n), os.children)
      end
@@ -279,3 +282,9 @@
 
 *** Commented out subsection
     This too, by virtue of its parent's commmentedness.
+
+** EXAMPLE
+   This example should not end up in the code.
+
+** EXAMPLE Another example
+   Neither should this named example.
