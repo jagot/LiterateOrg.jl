@@ -98,12 +98,17 @@
                  elseif ismatch(sec_pat, line)
                      m = match(sec_pat, line)
                      l = length(m[1])
-                     section = OrgSection(m[3], l, OrgNode[],
-                                          Symbol(m[2] != nothing ? lowercase(m[2]) : :code))
 
                      while !isempty(sec_stack) && level(top(sec_stack)) >= l
                          pop!(sec_stack)
                      end
+
+                     # We inherit the section kind of the section on the
+                     # top of the stack, unless the kind is specified in
+                     # the Org file.
+                     section = OrgSection(m[3], l, OrgNode[],
+                                          Symbol(m[2] != nothing ? lowercase(m[2]) :
+                                                 isempty(sec_stack) ? :normal : top(sec_stack).kind))
 
                      if isempty(sec_stack)
                          push!(sec_stack, section)
@@ -123,9 +128,9 @@
                          m = match(start_code_pat, lowercase(line))
                          node = OrgCode("", m[1], m[2])
                          last_node = node
-                         node_mode = :code
+                         node_mode = :normal
                      elseif typeof(last_node) == OrgText && node_mode == :text ||
-                         typeof(last_node) == OrgCode && node_mode == :code
+                         typeof(last_node) == OrgCode && node_mode == :normal
                          last_node.contents = "$(last_node.contents)\n$(line)"
                      else
                          node = OrgText(line)
@@ -152,12 +157,49 @@
    : read_org_file
 
 *** TEST
+    This is an unnamed test.
+
+    All code blocks under this heading, regardless of depth, will be
+    included in the test suite, unless they belong to COMMENTs or
+    EXAMPLEs.
+
     #+BEGIN_SRC julia
       @test 1 == 1
     #+END_SRC
 
     #+RESULTS:
     : 7
+
+**** This is a nested test set
+     #+BEGIN_SRC julia
+       @test 3 == 3
+     #+END_SRC
+
+*** TEST With a "name"
+    This is a named test
+    #+BEGIN_SRC julia
+      @test 2 == 2
+    #+END_SRC
+
+**** This is a nested test set
+     #+BEGIN_SRC julia
+       @test 3 == 3
+     #+END_SRC
+
+***** This is a nested, nested test set
+     #+BEGIN_SRC julia
+       @test 5 == 5
+     #+END_SRC
+
+***** TEST This is a nested, nested test set
+     #+BEGIN_SRC julia
+       @test 6 == 6
+     #+END_SRC
+
+**** This is another nested test set
+     #+BEGIN_SRC julia
+       @test 4 == 4
+     #+END_SRC
 
 ** Tangle Julia code
    Once we have a Julia representation of the Org file, we can tangle
@@ -166,25 +208,32 @@
      file_endings = Dict("julia" => "jl", "python" => "py")
      comments = Dict("julia" => "#", "python" => "#")
 
-     function tangle(io::IO, os::OrgSection, language::String)
+     function tangle(io::IO, os::OrgSection, language::String, istestset::Bool=false)
          os.kind ∈ [:comment, :example] && return
          write(io, @sprintf("%s %s %s\n",
                             comments[language],
                             repeat("*", os.level),
                             os.title))
-         map(n -> tangle(io, n, language), os.children)
+
+         istestset |= os.kind == :test && !isempty(os.title)
+         istestset &&  write(io, @sprintf("@testset \"%s\" begin\n",
+                                         replace(os.title, "\"", "\\\"")))
+
+         map(n -> tangle(io, n, language, istestset), os.children)
+
+         istestset &&  write(io, "end\n")
      end
 
-     function tangle(io::IO, ot::OrgText, language::String)
+     function tangle(io::IO, ot::OrgText, language::String, ::Bool=false)
          for line in split(ot.contents, "\n")
              write(io, @sprintf("%s %s\n", comments[language], line))
          end
      end
 
-     tangle(io::IO, oc::OrgCode, language::String) =
+     tangle(io::IO, oc::OrgCode, language::String, ::Bool=false) =
          oc.language == language && write(io, oc.contents)
 
-     tangle(io::IO, op::OrgProperty, language::String) =
+     tangle(io::IO, op::OrgProperty, language::String, ::Bool=false) =
          write(io, @sprintf("%s % 10s: %s\n", comments[language], uppercase(op.property), op.value))
 
      function tangle(outfilename::String, of::OrgFile, language::String="julia")
@@ -206,11 +255,14 @@
     We use the functionality from above to generate a package source
     code file from all code blocks that are /not/ test cases, and
     conversely, a unit test file from all code blocks that are found
-    under sections with the heading "Test".
+    under sections with heading containing "TEST".
     #+BEGIN_SRC julia
-      extract(o::OrgNode, tests::Bool=false) = o
+      extract(o::OrgNode, ::Bool=false) = o
+
       function extract(o::OrgSection, tests::Bool=false)
-          !tests && o.kind != :code && return nothing
+          o.kind == :normal ||
+              tests && o.kind == :test ||
+              return nothing
 
           children = OrgNode[]
           for child in extract.(o.children, tests)
@@ -256,7 +308,7 @@
      function show(io::IO, os::OrgSection)
          write(io, @sprintf("%s %s%s\n",
                             repeat("*", os.level),
-                            os.kind == :code ? "" : "$(uppercase(string(os.kind))) ",
+                            os.kind == :normal ? "" : "$(uppercase(string(os.kind))) ",
                             os.title))
          map(n -> show(io, n), os.children)
      end
