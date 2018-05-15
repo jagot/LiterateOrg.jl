@@ -5,9 +5,8 @@ println("Building LiterateOrg.jl")
 
 src_file = joinpath(Pkg.dir("LiterateOrg"), "src", "LiterateOrg.org")
 
-build_dir = joinpath(Pkg.dir("LiterateOrg"), "deps", "build")
-mkpath(build_dir)
-bootstrap_file = joinpath(build_dir, "bootstrap.jl")
+deps_dir = joinpath(Pkg.dir("LiterateOrg"), "deps")
+bootstrap_file = joinpath(deps_dir, "bootstrap.jl")
 
 start_code_pat = r"[ ]*#\+begin_src[ ]+julia(.*)"
 end_code_pat = r"[ ]*#\+end_src"

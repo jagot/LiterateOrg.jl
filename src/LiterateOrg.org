@@ -287,11 +287,10 @@
       function tangle_package(org_filename::String, package_name::String)
           org_file = read_org_file(org_filename)
 
-          build_dir = joinpath(Pkg.dir(package_name), "deps", "build")
-          mkpath(build_dir)
+          pkg_dir = Pkg.dir(package_name)
 
-          tangle(joinpath(build_dir, "code.jl"), extract(org_file))
-          tangle(joinpath(build_dir, "tests.jl"), extract(org_file, true))
+          tangle(joinpath(pkg_dir, "src", "literate_org_tangled_code.jl"), extract(org_file))
+          tangle(joinpath(pkg_dir, "test", "literate_org_tangled_tests.jl"), extract(org_file, true))
       end
 
       export tangle_package
