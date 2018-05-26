@@ -3,9 +3,9 @@ println("Building LiterateOrg.jl")
 # Bootstrap package by extracting all package code to a Julia file and
 # include it.
 
-src_file = joinpath(Pkg.dir("LiterateOrg"), "src", "LiterateOrg.org")
+src_file = joinpath(dirname(@__FILE__), "..", "src", "LiterateOrg.org")
 
-deps_dir = joinpath(Pkg.dir("LiterateOrg"), "deps")
+deps_dir = joinpath(dirname(@__FILE__), "..", "deps")
 bootstrap_file = joinpath(deps_dir, "bootstrap.jl")
 
 start_code_pat = r"[ ]*#\+begin_src[ ]+julia(.*)"
@@ -34,7 +34,11 @@ end
 println("Running bootstrap file")
 
 # This is necessary for included test expressions to work.
-using Base.Test
+if VERSION <= v"0.6.2"
+    using Base.Test
+else
+    using Test
+end
 include(bootstrap_file)
 rm(bootstrap_file)
 

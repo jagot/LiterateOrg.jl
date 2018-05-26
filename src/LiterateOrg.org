@@ -52,13 +52,30 @@
 
    #+RESULTS:
    : nothing
+** Simple stack implementation
+   #+BEGIN_SRC julia
+     struct SimpleStack{T}
+         v::Vector{T}
+     end
+
+     SimpleStack(T::Type) = SimpleStack(T[])
+
+     import Base: push!, pop!, isempty
+
+     push!(s::SimpleStack{T}, e::T) where T = push!(s.v, e)
+     pop!(s::SimpleStack{T}) where T = pop!(s.v)
+     isempty(s::SimpleStack{T}) where T = isempty(s.v)
+     top(s::SimpleStack{T}) where T = s.v[end]
+   #+END_SRC
+
+   #+RESULTS:
+   : top (generic function with 1 method)
+
 
 ** Read Org file
    This function reads an Org-mode file and turns it into a Julia data
    structure.
    #+BEGIN_SRC julia :results verbatim
-     using DataStructures
-
      function read_org_file(filename::String)
          title = ""
          author = ""
@@ -71,7 +88,7 @@
          start_code_pat = r"[ ]*#\+begin_src[ ]+([^ ]+)(.*)"
          end_code_pat = r"[ ]*#\+end_src"
 
-         sec_stack = Stack(OrgSection)
+         sec_stack = SimpleStack(OrgSection)
          last_node = nothing
          node_mode = :text
 
@@ -208,6 +225,10 @@
      file_endings = Dict("julia" => "jl", "python" => "py")
      comments = Dict("julia" => "#", "python" => "#")
 
+     if VERSION > v"0.6.2"
+         using Printf
+     end
+
      function tangle(io::IO, os::OrgSection, language::String, istestset::Bool=false)
          os.kind ∈ [:comment, :example] && return
          write(io, @sprintf("%s %s %s\n",
@@ -287,7 +308,7 @@
       function tangle_package(org_filename::String, package_name::String)
           org_file = read_org_file(org_filename)
 
-          pkg_dir = Pkg.dir(package_name)
+          pkg_dir = abspath(joinpath(dirname(org_filename), ".."))
 
           tangle(joinpath(pkg_dir, "src", "literate_org_tangled_code.jl"), extract(org_file))
           tangle(joinpath(pkg_dir, "test", "literate_org_tangled_tests.jl"), extract(org_file, true))

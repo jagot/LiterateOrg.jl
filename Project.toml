@@ -1,0 +1,7 @@
+authors = ["Stefanos Carlström <stefanos.carlstrom@gmail.com>"]
+name = "LiterateOrg"
+uuid = "93c33440-6125-11e8-0ffd-df540d4e821e"
+version = "0.1.0"
+
+[deps]
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
