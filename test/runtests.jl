@@ -1,8 +1,8 @@
 using LiterateOrg
-if VERSION <= v"0.6.2"
-    using Base.Test
-else
+if VERSION.major > 0 || VERSION.minor > 6
     using Test
+else
+    using Base.Test
 end
 
 const testfile = joinpath(dirname(@__FILE__), "literate_org_tangled_tests.jl")

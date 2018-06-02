@@ -225,7 +225,7 @@
      file_endings = Dict("julia" => "jl", "python" => "py")
      comments = Dict("julia" => "#", "python" => "#")
 
-     if VERSION > v"0.6.2"
+     if VERSION.major > 0 || VERSION.minor > 6
          using Printf
      end
 

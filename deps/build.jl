@@ -34,10 +34,10 @@ end
 println("Running bootstrap file")
 
 # This is necessary for included test expressions to work.
-if VERSION <= v"0.6.2"
-    using Base.Test
-else
+if VERSION.major > 0 || VERSION.minor > 6
     using Test
+else
+    using Base.Test
 end
 include(bootstrap_file)
 rm(bootstrap_file)
