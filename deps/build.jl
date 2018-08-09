@@ -19,10 +19,10 @@ open(src_file) do infile
     open(bootstrap_file, "w") do outfile
         for line in readlines(infile)
             global code_mode
-            if ismatch(start_code_pat, lowercase(line))
+            if occursin(start_code_pat, lowercase(line))
                 code_mode = true
                 continue
-            elseif ismatch(end_code_pat, lowercase(line))
+            elseif occursin(end_code_pat, lowercase(line))
                 code_mode = false
                 continue
             end

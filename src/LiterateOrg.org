@@ -102,7 +102,7 @@
 
          open(filename) do file
              for line in readlines(file)
-                 if ismatch(prop_pat, line)
+                 if occursin(prop_pat, line)
                      m = match(prop_pat, line)
                      prop = OrgProperty(lowercase(m[1]), m[2])
                      push!(tree, prop)
@@ -120,7 +120,7 @@
                      elseif prop_type == "date"
                          date = prop_val
                      end
-                 elseif ismatch(sec_pat, line)
+                 elseif occursin(sec_pat, line)
                      m = match(sec_pat, line)
                      l = length(m[1])
 
@@ -145,11 +145,11 @@
                      end
 
                      last_node = section
-                 elseif ismatch(end_code_pat, lowercase(line))
+                 elseif occursin(end_code_pat, lowercase(line))
                      node_mode = :text
                  else # Code/normal text
                      node = nothing
-                     if ismatch(start_code_pat, lowercase(line))
+                     if occursin(start_code_pat, lowercase(line))
                          m = match(start_code_pat, lowercase(line))
                          node = OrgCode("", m[1], m[2])
                          last_node = node
@@ -242,7 +242,7 @@
 
          istestset |= os.kind == :test && !isempty(os.title)
          istestset &&  write(io, @sprintf("@testset \"%s\" begin\n",
-                                         replace(os.title, "\"", "\\\"")))
+                                         replace(os.title, "\"" => "\\\"")))
 
          map(n -> tangle(io, n, language, istestset), os.children)
 
