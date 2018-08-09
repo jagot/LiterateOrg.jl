@@ -13,6 +13,14 @@
   tangled; those under a section headline simply called "Test" go into
   the unit tests, whereas the rest make up the package implementation.
 
+* Imports
+  #+BEGIN_SRC julia
+    if VERSION.major > 0 || VERSION.minor > 6
+        using Printf
+        using Dates
+    end
+  #+END_SRC
+
 * Code to parse an Org-file
 ** Org file data structure
    #+BEGIN_SRC julia
@@ -224,10 +232,6 @@
    #+BEGIN_SRC julia
      file_endings = Dict("julia" => "jl", "python" => "py")
      comments = Dict("julia" => "#", "python" => "#")
-
-     if VERSION.major > 0 || VERSION.minor > 6
-         using Printf
-     end
 
      function tangle(io::IO, os::OrgSection, language::String, istestset::Bool=false)
          os.kind ∈ [:comment, :example] && return
