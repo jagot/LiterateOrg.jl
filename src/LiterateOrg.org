@@ -15,11 +15,16 @@
 
 * Imports
   #+BEGIN_SRC julia
-    if VERSION.major > 0 || VERSION.minor > 6
-        using Printf
-        using Dates
-    end
+    using Printf
+    using Dates
   #+END_SRC
+
+** TEST
+   #+BEGIN_SRC julia
+     using LiterateOrg
+     using Test
+   #+END_SRC
+
 
 * Code to parse an Org-file
 ** Org file data structure
@@ -78,7 +83,16 @@
 
    #+RESULTS:
    : top (generic function with 1 method)
+*** TEST Simple stack
+    #+BEGIN_SRC julia
+      s = LiterateOrg.SimpleStack(Int)
 
+      push!(s, 1)
+      @test !isempty(s)
+      @test LiterateOrg.top(s) == 1
+      @test pop!(s) == 1
+      @test isempty(s)
+    #+END_SRC
 
 ** Read Org file
    This function reads an Org-mode file and turns it into a Julia data
