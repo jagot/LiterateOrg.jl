@@ -252,7 +252,7 @@
          write(io, @sprintf("%s %s %s\n",
                             comments[language],
                             repeat("*", os.level),
-                            os.title))
+                            !isempty(strip(os.title)) ? os.title : uppercase(string(os.kind))))
 
          istestset |= os.kind == :test && !isempty(os.title)
          istestset &&  write(io, @sprintf("@testset \"%s\" begin\n",
@@ -337,6 +337,57 @@
 
     #+RESULTS:
     : nothing
+
+**** TEST Self-tangling
+     These tests basically ensures that LiterateOrg.jl has been able
+     to dogfood itself, i.e. that the headings in /this/ file are
+     present in =src/literate_org_tangle_code.jl= and
+     =test/literate_org_tangled_tests.jl=, respectively.
+
+     #+BEGIN_SRC julia
+       test_file = @__FILE__
+       test_dir = dirname(test_file)
+       src_dir = joinpath(dirname(test_dir), "src")
+       code_file = joinpath(src_dir, "literate_org_tangled_code.jl")
+
+       sec_pat = r"^# ([*]+)"
+       tangled_headers = filter(line -> occursin(sec_pat, line), readlines(code_file))
+
+       tangled_test_headers = filter(line -> occursin(sec_pat, line), readlines(test_file))
+
+       org_file = LiterateOrg.read_org_file(joinpath(src_dir, "LiterateOrg.org"))
+
+       function test_tangling(tangled_headers, skip)
+           s = LiterateOrg.SimpleStack(LiterateOrg.OrgSection)
+           for n in reverse(org_file.tree)
+               n isa LiterateOrg.OrgSection || continue
+               push!(s, n)
+           end
+           while !isempty(s)
+               n = pop!(s)
+
+               l = repeat("*", n.level)
+               t = !isempty(strip(n.title)) ? n.title : uppercase(string(n.kind))
+               line = "# $l $t"
+               if n.kind ∈ skip
+                   @test line ∉ tangled_headers
+                   continue
+               end
+               @test line ∈ tangled_headers
+
+               child_sections = filter(nn -> nn isa LiterateOrg.OrgSection, n.children)
+               if !isempty(child_sections)
+                   for nn in reverse(child_sections)
+                       push!(s, nn)
+                   end
+               end
+           end
+       end
+
+       test_tangling(tangled_headers, [:test, :comment, :example])
+       test_tangling(tangled_test_headers, [:comment, :example])
+     #+END_SRC
+
 
 
 ** String representation
