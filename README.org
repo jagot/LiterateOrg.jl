@@ -3,7 +3,7 @@
 #+EMAIL: stefanos.carlstrom@gmail.com
 
 [[https://travis-ci.org/jagot/LiterateOrg.jl][https://travis-ci.org/jagot/LiterateOrg.jl.svg?branch=master]]
-[[https://coveralls.io/github/jagot/LiterateOrg.jl?branch=master][https://coveralls.io/repos/github/jagot/LiterateOrg.jl/badge.svg?branch=master]]
+[[https://ci.appveyor.com/project/jagot/LiterateOrg-jl][https://img.shields.io/appveyor/build/jagot/literateorg-jl.svg]]
 [[http://codecov.io/gh/jagot/LiterateOrg.jl][http://codecov.io/gh/jagot/LiterateOrg.jl/branch/master/graph/badge.svg]]
 
 Brings Emacs to Julia! The documentation is, of course, found in [[file:src/LiterateOrg.org][the
